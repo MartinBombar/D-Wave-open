@@ -17,18 +17,17 @@ def getDistancesFromDataFile(PATH):
     return adjacency_matrix
 
 def build_maxcut_qubo(distances):
-    num_cities = len(distances)
-    print("\nBuilding a CQM for TSP with {} cities.".format(num_cities))
+    num_nodes = len(distances)
+    print("\nBuilding a qubo for maxCut with {} nodes.".format(num_nodes))
 
     # Initialize the CQM
     cqm = ConstrainedQuadraticModel()
 
-    # Binary variables x[i,j] where i is the city and j is the position in the tour
+    # Binary variables x[i] where i is the number of the node     
     x = {}
-    for i in range(num_cities):
-        for j in range(num_cities):
-            x[(i, j)] = BinaryQuadraticModel(vartype='BINARY')
-            x[(i, j)].add_variable(i * num_cities + j)
+    for i in range(num_nodes):
+        x[i] = BinaryQuadraticModel(vartype='BINARY')
+        x[i].add_variable(i)
 
     # Objective: Minimize the total distance
     obj = BinaryQuadraticModel(vartype='BINARY')
