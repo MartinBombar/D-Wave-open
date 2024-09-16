@@ -16,50 +16,32 @@ def getDistancesFromDataFile(PATH):
             adjacency_matrix.append(row)
     return adjacency_matrix
 
-def build_maxcut_qubo(distances):
-    num_nodes = len(distances)
-    print("\nBuilding a qubo for maxCut with {} nodes.".format(num_nodes))
+def build_maxcut_qubo(adjacency):
 
-    # Initialize the CQM
+    #Building the Quadratic Unconstrained Binary Model 
+    num_items = len(adjacency)
+    print("\nBuilding a QUBO for {} nodes.".format(str(num_items)))
+
     cqm = ConstrainedQuadraticModel()
-
-    # Binary variables x[i] where i is the number of the node     
-    x = {}
-    for i in range(num_nodes):
-        x[i] = BinaryQuadraticModel(vartype='BINARY')
-        x[i].add_variable(i)
-
-    # Objective: Minimize the total distance
     obj = BinaryQuadraticModel(vartype='BINARY')
-    for i in range(num_cities):
-        for j in range(num_cities):
-            for k in range(num_cities):
-                if i != k:
-                    obj.set_quadratic(i * num_cities + j, k * num_cities + (j + 1) % num_cities, distances[i][k])
+    constraint = QuadraticModel()
+
+    for i in range(num_items):
+        # Objective is to maximize the total costs
+        obj.add_variable(i)
+
+    for i in range(num_items):
+        for j in range(i+1,num_items):
+            obj.add_interaction(i, j, -2)  # Add the interaction term -2x_ix_j
+            obj.set_linear(i, obj.get_linear(i) + 1)  # Add x_i term
+            obj.set_linear(j, obj.get_linear(j) + 1)  # Add x_j term
+
+    # Add the objective to the CQM
     cqm.set_objective(obj)
-
-    # Constraints:
-    # 1. Each city must be visited exactly once.
-    for i in range(num_cities):
-        constraint = QuadraticModel()
-        for j in range(num_cities):
-            constraint.add_variable('BINARY', i * num_cities + j)
-            constraint.set_linear(i * num_cities + j, 1)
-        cqm.add_constraint(constraint, sense="==", rhs=1, label=f'visit_once_{i}')
-
-    # 2. Each position in the tour must be filled by exactly one city.
-    for j in range(num_cities):
-        constraint = QuadraticModel()
-        for i in range(num_cities):
-            constraint.add_variable('BINARY', i * num_cities + j)
-            constraint.set_linear(i * num_cities + j, 1)
-        cqm.add_constraint(constraint, sense="==", rhs=1, label=f'one_city_per_pos_{j}')
-
     return cqm
 
 def main():
-    client = dwave.cloud.Client(endpoint='https://my.dwave.system.com/sapi',  token='', permissive_ssl=True)
-    PATH = 'data/distances.csv'
+    PATH = 'data/adjacency.csv'
 
     # Initialize solver
     sampler = LeapHybridCQMSampler()
@@ -73,8 +55,9 @@ def main():
 
     # Submit the problem to the solver
     print("Submitting CQM to solver {}.".format(sampler.solver.name))
-    #
-    # sampleset = sampler.sample_cqm(cqm, label='Example - TSP')
+    
+    sampleset = sampler.sample_cqm(cqm, label='Example - TSP')
+    
     print(sampleset)
 
 

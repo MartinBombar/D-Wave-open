@@ -13,23 +13,23 @@ def getValuesFromDataFile(PATH):
 
     with open(PATH, mode='r') as file:
         # Skip the header line
-        next(file)
+        # next(file)
         
-        costs=[]
-        weights=[]
+        sizes=[]
+        values=[]
         # Read each line, split it by comma, and store the values in respective lists
         for line in file:
             # Strip any whitespace or newlines and split by comma
-            cost, weight = line.strip().split(',')
+            size, value = line.strip().split(',')
             
             # Append the values to the lists (convert them to integers)
-            costs.append(int(cost))
-            weights.append(int(weight))
-    return costs, weights
+            sizes.append(int(size))
+            values.append(int(value))
+    return sizes, values
 
-def build_knapsack_cqm(costs, weights, max_weight):
+def build_knapsack_cqm(sizes, values, max_size):
     #Building the Constrained Quadratic Model (CQM)
-    num_items = len(costs)
+    num_items = len(sizes)
     print("\nBuilding a CQM for {} items.".format(str(num_items)))
 
     cqm = ConstrainedQuadraticModel()
@@ -39,30 +39,29 @@ def build_knapsack_cqm(costs, weights, max_weight):
     for i in range(num_items):
         # Objective is to maximize the total costs
         obj.add_variable(i)
-        obj.set_linear(i, -costs[i])
-        # Constraint is to keep the sum of items' weights under or equal capacity
+        obj.set_linear(i, -values[i])
+        # Constraint is to keep the sum of items' sizes under or equal capacity
         constraint.add_variable('BINARY', i)
-        constraint.set_linear(i, weights[i])
+        constraint.set_linear(i, sizes[i])
 
     cqm.set_objective(obj)
-    cqm.add_constraint(constraint, sense="<=", rhs=max_weight, label='capacity')
+    cqm.add_constraint(constraint, sense="<=", rhs=max_size, label='capacity')
 
     return cqm
 
 def main():
-    client = dwave.cloud.Client(endpoint='https://my.dwave.system.com/sapi',  token='', permissive_ssl=True)
     knapsackSize=10
-    PATH='data/data.csv'
+    PATH="Knapsack/data/data.csv"
 
     #initialize solver
     sampler = LeapHybridCQMSampler()
 
     #Get Values from file
-    costs, weights=getValuesFromDataFile(PATH)
-    print("cost : \n",costs,"\n","weight : \n",weights)
+    sizes, values=getValuesFromDataFile(PATH)
+    print("Size : \n",sizes,"\n","weight : \n",values)
 
     #build problem from data and parameters
-    cqm=build_knapsack_cqm(costs,weights,knapsackSize)
+    cqm=build_knapsack_cqm(sizes,values,knapsackSize)
 
     #submit the problem to the solver
     print("Submitting CQM to solver {}.".format(sampler.solver.name))
