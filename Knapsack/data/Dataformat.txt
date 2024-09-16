@@ -1,4 +1,3 @@
-knapsack_size
 item1_size , item1_value
 item2_size , item2_value
 ...

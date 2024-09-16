@@ -1,5 +1,4 @@
-knapsack_size
-item1_size , item1_value
-item2_size , item2_value
-...
-itemN_size , itemN_value
+distance_C1_C1 , distance_C1_C2 , ... , distance_C1_Cn
+distance_C2_C1 , distance_C2_C2 , ... , distance_C1_Cn
+....
+distance_Cn_C1 , distance_Cn_C2 , ... , distance_Cn_Cn
