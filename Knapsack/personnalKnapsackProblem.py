@@ -50,8 +50,8 @@ def build_knapsack_cqm(sizes, values, max_size):
     return cqm
 
 def main():
-    knapsackSize=10
-    PATH="Knapsack/data/data.csv"
+    knapsackSize=300
+    PATH="D-Wave-open/Knapsack/data/data.csv"
 
     #initialize solver
     sampler = LeapHybridCQMSampler()
