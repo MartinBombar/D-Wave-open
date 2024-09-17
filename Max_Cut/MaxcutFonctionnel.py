@@ -2,12 +2,7 @@ import dimod
 from dwave.system import EmbeddingComposite, DWaveSampler
 
 def parse_adjacency_matrix(filename):
-    """
-    Parse a text file containing an adjacency matrix.
     
-    :param filename: The path to the file containing the adjacency matrix.
-    :return: A list of lists (2D array) representing the adjacency matrix.
-    """
     adjacency_matrix = []
     
     with open(filename, 'r') as file:
@@ -19,12 +14,7 @@ def parse_adjacency_matrix(filename):
     return adjacency_matrix
 
 def max_cut_qubo(adjacency_matrix):
-    """
-    Create a QUBO dictionary for the Max-Cut problem from an adjacency matrix.
     
-    :param adjacency_matrix: A list of lists representing the adjacency matrix.
-    :return: A QUBO dictionary.
-    """
     num_nodes = len(adjacency_matrix)
     Q = {}
 
@@ -38,12 +28,7 @@ def max_cut_qubo(adjacency_matrix):
     return Q
 
 def display_solution(solution, cut_value):
-    """
-    Nicely formats and displays the Max-Cut solution and value.
     
-    :param solution: The solution dictionary from the sampler.
-    :param cut_value: The energy (Max-Cut value) from the sampler.
-    """
     # Extract node assignments into a list for better readability
     partition_0 = [node for node, val in solution.items() if val == 0]
     partition_1 = [node for node, val in solution.items() if val == 1]
@@ -69,7 +54,7 @@ if __name__ == "__main__":
     sampler = EmbeddingComposite(DWaveSampler())
     
     # Solve the Max-Cut problem with multiple reads
-    response = sampler.sample_qubo(Q, num_reads=100)
+    response = sampler.sample_qubo(Q, num_reads=100,label='Max cut')
     
     # Get the best solution and Max-Cut value
     best_solution = response.first.sample

@@ -1,66 +1,48 @@
 import os
-import itertools
-import click
 import pandas as pd
-import dwave
 from dwave.system import LeapHybridCQMSampler
-from dimod import ConstrainedQuadraticModel, BinaryQuadraticModel, QuadraticModel
-
+from dimod import ConstrainedQuadraticModel, Binary
 
 def getDistancesFromDataFile(PATH):
-    with open(PATH, mode='r') as file:
-        # Read the distance matrix from the CSV file
-        distance_matrix = []
-        for line in file:
-            row = list(map(int, line.strip().split(',')))
-            distance_matrix.append(row)
-    return distance_matrix
+    # Read the distance matrix from the CSV file
+    try:
+        distance_matrix = pd.read_csv(PATH, header=None).values.tolist()
+        return distance_matrix
+    except Exception as e:
+        raise ValueError(f"Error reading distance file: {e}")
 
 def build_tsp_cqm(distances):
     num_cities = len(distances)
-    print("\nBuilding a CQM for TSP with {} cities.".format(num_cities))
+    print(f"\nBuilding a CQM for TSP with {num_cities} cities.")
 
     # Initialize the CQM
     cqm = ConstrainedQuadraticModel()
 
-    # Binary variables x[i,j] where i is the city and j is the position in the tour
-    x = {}
-    for i in range(num_cities):
-        for j in range(num_cities):
-            x[(i, j)] = BinaryQuadraticModel(vartype='BINARY')
-            x[(i, j)].add_variable(i * num_cities + j)
+    # Binary variables x[i, j] where i is the city and j is the position in the tour
+    x = {(i, j): Binary(f'x_{i}_{j}') for i in range(num_cities) for j in range(num_cities)}
 
     # Objective: Minimize the total distance
-    obj = BinaryQuadraticModel(vartype='BINARY')
+    obj = 0
     for i in range(num_cities):
         for j in range(num_cities):
             for k in range(num_cities):
                 if i != k:
-                    obj.set_quadratic(i * num_cities + j, k * num_cities + (j + 1) % num_cities, distances[i][k])
+                    obj += distances[i][k] * x[i, j] * x[k, (j + 1) % num_cities]
     cqm.set_objective(obj)
 
     # Constraints:
     # 1. Each city must be visited exactly once.
     for i in range(num_cities):
-        constraint = QuadraticModel()
-        for j in range(num_cities):
-            constraint.add_variable('BINARY', i * num_cities + j)
-            constraint.set_linear(i * num_cities + j, 1)
-        cqm.add_constraint(constraint, sense="==", rhs=1, label=f'visit_once_{i}')
+        cqm.add_constraint(sum(x[i, j] for j in range(num_cities)) == 1, label=f'visit_once_{i}')
 
     # 2. Each position in the tour must be filled by exactly one city.
     for j in range(num_cities):
-        constraint = QuadraticModel()
-        for i in range(num_cities):
-            constraint.add_variable('BINARY', i * num_cities + j)
-            constraint.set_linear(i * num_cities + j, 1)
-        cqm.add_constraint(constraint, sense="==", rhs=1, label=f'one_city_per_pos_{j}')
+        cqm.add_constraint(sum(x[i, j] for i in range(num_cities)) == 1, label=f'one_city_per_pos_{j}')
 
     return cqm
 
 def main():
-    client = dwave.cloud.Client(endpoint='https://my.dwave.system.com/sapi',  token='', permissive_ssl=True)
-    PATH = 'data/distances.csv'
+    PATH = 'D-Wave-open/TSP/data/distances.csv'  # Use the appropriate relative or absolute path
 
     # Initialize solver
     sampler = LeapHybridCQMSampler()
@@ -73,10 +55,30 @@ def main():
     cqm = build_tsp_cqm(distances)
 
     # Submit the problem to the solver
-    print("Submitting CQM to solver {}.".format(sampler.solver.name))
+    print("Submitting CQM to solver.")
     sampleset = sampler.sample_cqm(cqm, label='Example - TSP')
-    print(sampleset)
 
+    # Display results
+    best_sample = sampleset.first.sample
+    print(f"Best sample: {best_sample}")
+    print(f"Energy: {sampleset.first.energy}")
+    print(f"Feasible: {sampleset.first.is_feasible}")
+
+    # Check feasibility of solution
+    if not sampleset.first.is_feasible:
+        print("Infeasible solution found. Constraints are violated.")
+    else:
+        print("Feasible solution found.")
+        # Optionally: Extract and display the tour
+        tour = []
+        for j in range(len(distances)):
+            for i in range(len(distances)):
+                if best_sample[f'x_{i}_{j}'] == 1:
+                    tour.append(i)
+                    break
+        print(f"The tour is: {tour}")
 
 if __name__ == '__main__':
     main()
+
+
